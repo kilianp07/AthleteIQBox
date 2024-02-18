@@ -1,0 +1,3 @@
+export SSH_TARGET= # Example: 192.168.1.100 or raspberrypi.local
+export GOOS= # Example: linux for Raspberry Pi
+export HOSTOS= # Example: darwin for macOS or linux for Linux. Also, this will be used to run the tests
