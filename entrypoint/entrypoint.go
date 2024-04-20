@@ -1,16 +1,19 @@
 package entrypoint
 
 import (
+	"context"
 	"log"
 
 	"github.com/kilianp07/AthleteIQBox/gps"
+	"github.com/kilianp07/AthleteIQBox/transmitter"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
 
 type configuration struct {
-	Gps gps.Configuration `json:"gps"`
+	Gps       gps.Configuration `json:"gps"`
+	Bluetooth transmitter.Conf  `json:"bluetooth"`
 }
 
 func Start(confFile string) {
@@ -36,6 +39,15 @@ func Start(confFile string) {
 	}
 
 	err = r.Start()
+
+	t, err := transmitter.New(conf.Bluetooth)
+	if err != nil {
+		log.Fatalf("error creating transmitter: %v", err)
+	}
+
+	if err = t.Start(context.Background()); err != nil {
+		log.Fatalf("error starting transmitter: %v", err)
+	}
 	if err != nil {
 		log.Fatalf("error starting gps reader: %v", err)
 		return
