@@ -1,13 +1,24 @@
 {
-    "device_name":"AthleteIQBox",
-    "services":{
-        "position":{
-            "latitude_uuid":"2c2c3269-e7f8-42ee-89f4-04d67aa115ca",
-            "latitude_user_description": "Latitude",
-            "longitude_uuid":"1b1120c7-165b-4352-9a06-21d797c2ef81",
-            "longitude_user_description": "Longitude",
-            "service_uuid":"a8b0461d-65e2-487e-bdd9-cb8db6b9f71f",
-            "user_description_uuid":"b8094a02-d706-4714-ba61-28ffbe9596c7"
-        }
+  "bluetooth": {
+    "device_name": "AthleteIQBox",
+    "services": {
+      "position": {
+        "latitude_uuid": "2c2c3269-e7f8-42ee-89f4-04d67aa115ca",
+        "latitude_user_description": "Latitude",
+        "longitude_uuid": "1b1120c7-165b-4352-9a06-21d797c2ef81",
+        "longitude_user_description": "Longitude",
+        "service_uuid": "a8b0461d-65e2-487e-bdd9-cb8db6b9f71f",
+        "user_description_uuid": "b8094a02-d706-4714-ba61-28ffbe9596c7"
+      }
     }
+  },
+  "gps":{
+    "id": "nmea",
+    "conf":{
+        "period": "1s",
+        "name": "/dev/serial0",
+        "baudrate": 9600,
+        "read_timeout": "1s"
+    }
+  }
 }
