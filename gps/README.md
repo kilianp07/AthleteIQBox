@@ -6,6 +6,20 @@ The `gps` package provides a flexible framework for handling GPS data from vario
 
 The `gps` package centers around the `Reader` interface, which all GPS readers must implement. This package facilitates the creation of GPS readers based on user-provided configurations, allowing for the seamless integration of different GPS data formats.
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant Cobra
+    participant EntryPoint
+    participant GPSReader
+
+    User->>Cobra: Run application with config
+    Cobra->>EntryPoint: Start application
+    EntryPoint->>GPSReader: Initialize with config
+    GPSReader->>GPSReader: Start data reading
+    GPSReader->>User: Stream GPS data
+```
+
 Dependencies:
 - **mapstructure**: Used for decoding configuration structures.
   ```shell
@@ -62,7 +76,7 @@ func New(conf Configuration) (Reader, error)
 
 - **Returns:**
   - `Reader`: A configured instance of the requested GPS reader.
-  - `error`: An error if the reader creation or configuration fails.
+  - `error`: Returns an error if the reader creation or configuration fails.
 
 - **Example Usage:**
 

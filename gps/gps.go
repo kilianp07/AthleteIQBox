@@ -2,19 +2,24 @@ package gps
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/kilianp07/AthleteIQBox/gps/nmea"
 )
 
 var (
-	readers = make(map[string]func() Reader)
+	readers   = make(map[string]func() Reader)
+	readersMu sync.RWMutex
 )
 
 func init() {
+	// Register the "nmea" reader
+	readersMu.Lock()
 	readers["nmea"] = func() Reader {
 		return nmea.New()
 	}
+	readersMu.Unlock()
 }
 
 type Reader interface {
@@ -31,23 +36,20 @@ type Configuration struct {
 }
 
 func New(conf Configuration) (Reader, error) {
-	var (
-		constructor func() Reader
-		r           Reader
-		ok          bool
-		err         error
-	)
-	if constructor, ok = readers[conf.ID]; !ok {
+	readersMu.RLock()
+	constructor, ok := readers[conf.ID]
+	readersMu.RUnlock()
+	if !ok {
 		return nil, fmt.Errorf("invalid reader: %s", conf.ID)
 	}
 
-	r = constructor()
+	r := constructor()
 
-	if err = mapstructure.Decode(conf.Conf, r.Conf()); err != nil {
+	if err := mapstructure.Decode(conf.Conf, r.Conf()); err != nil {
 		return nil, fmt.Errorf("failed to decode configuration: %w", err)
 	}
 
-	if err = r.Configure(); err != nil {
+	if err := r.Configure(); err != nil {
 		return nil, err
 	}
 
