@@ -35,5 +35,12 @@ func Start(confFile string) {
 		log.Fatalf("error creating gps reader: %v", err)
 	}
 
-	_ = r.Start()
+	err = r.Start()
+	if err != nil {
+		log.Fatalf("error starting gps reader: %v", err)
+		return
+	}
+
+	// Block forever.
+	select {}
 }

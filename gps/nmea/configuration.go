@@ -6,14 +6,15 @@ import (
 	"github.com/tarm/serial"
 )
 
+// nolint:staticcheck
 type Configuration struct {
-	serialConfig `json:"squash"`
+	serialConfig `json:",squash"`
 	Period       string `json:"period"`
 }
 
 type serialConfig struct {
 	Name        string        `json:"name"`
-	Baud        int           `json:"baud"`
+	Baud        int           `json:"baudrate"`
 	ReadTimeout time.Duration `json:"read_timeout"`
 	Size        byte          `json:"size"`
 	Parity      byte          `json:"parity"`

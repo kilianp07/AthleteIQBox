@@ -20,7 +20,7 @@ upload:
 
 run :
 	@echo "Running on Raspberry Pi..."
-	@ssh $(SSH_TARGET) "cd AthleteIQBox && sudo ./$(BINARY_NAME)"
+	@ssh $(SSH_TARGET) "cd AthleteIQBox && sudo ./$(BINARY_NAME) --conf box.json"
 	@echo "Done!"
 test :
 	@echo "Testing on local..."
