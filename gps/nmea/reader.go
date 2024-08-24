@@ -18,7 +18,7 @@ type Point struct {
 }
 
 type Reader struct {
-	conf   *Configuration
+	conf   Configuration
 	period time.Duration
 
 	runCh chan bool
@@ -26,20 +26,15 @@ type Reader struct {
 }
 
 func New() *Reader {
-	return &Reader{}
+	return &Reader{
+		conf: Configuration{},
+	}
 }
 
 func (r *Reader) Conf() any {
 	return &r.conf
 }
 func (r *Reader) Configure() error {
-
-	/*
-		err := mapstructure.Decode(configuration, &r.conf)
-		if err != nil {
-			return fmt.Errorf("failed to decode configuration: %w", err)
-		}
-	*/
 
 	// Parse the period
 	period, err := time.ParseDuration(r.conf.Period)
@@ -49,9 +44,9 @@ func (r *Reader) Configure() error {
 	r.period = period
 
 	// Initialize the run channel
-	r.runCh = make(chan bool)
+	r.runCh = make(chan bool, 1)
 	// Initialize the error channel
-	r.errCh = make(chan error)
+	r.errCh = make(chan error, 1)
 
 	// Try to open the serial port
 	s, err := serial.OpenPort(r.conf.serialConfig.ToSerial())
