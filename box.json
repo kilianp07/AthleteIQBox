@@ -15,12 +15,21 @@
     }
   },
   "gps": {
-    "id": "nmea",
-    "conf": {
-      "period": "1s",
-      "name": "/dev/serial0",
-      "baudrate": 9600,
-      "read_timeout": "1s"
+    "reader":{
+      "id": "nmea",
+      "conf": {
+        "period": "1s",
+        "name": "/dev/serial0",
+        "baudrate": 9600,
+        "read_timeout": "1s"
+      }
+    },
+    "recorder":{
+      "id": "sqlite",
+      "conf": {
+        "db_filepath": "./",
+        "flush_period": "1s"
+      }
     }
   }
 }

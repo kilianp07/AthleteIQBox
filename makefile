@@ -1,11 +1,17 @@
 BINARY_NAME=athleteiqbox
 MAIN_GO_PATH=./main.go
+DOCKER_IMAGE=athleteiqbox-builder
 
 all: raspberry upload run
 
 raspberry:
-	@echo "Compiling for Raspberry Pi..."
-	@GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o ./build/raspberry/$(BINARY_NAME) $(MAIN_GO_PATH)
+	@echo "Compiling for Raspberry Pi using Docker with CGO enabled..."
+	@docker run --rm \
+	   -v $(PWD):/app \
+	   -w /app \
+	   -e CGO_ENABLED=1 \
+	   ghcr.io/kilianp07/pi-go-build-images:bullseye-arm64-v1.23.0 \
+	   go build -o ./build/raspberry/$(BINARY_NAME) $(MAIN_GO_PATH)
 	@echo "Done!"
 
 clean:

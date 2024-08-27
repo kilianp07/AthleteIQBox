@@ -1,44 +1,37 @@
-package reader
+package recorder
 
 import (
 	"fmt"
 	"reflect"
-	"sync"
 
 	"github.com/kilianp07/AthleteIQBox/data"
-	"github.com/kilianp07/AthleteIQBox/gps/reader/nmea"
+	"github.com/kilianp07/AthleteIQBox/gps/recorder/sqlite"
 	"github.com/kilianp07/AthleteIQBox/utils"
 )
 
 var (
-	readers   = make(map[string]func() Reader)
-	readersMu sync.RWMutex
+	recorders = make(map[string]func() Recorder)
 )
 
 func init() {
-	// Register the "nmea" reader
-	readersMu.Lock()
-	readers["nmea"] = func() Reader {
-		return nmea.New()
+	recorders["sqlite"] = func() Recorder {
+		return sqlite.New()
 	}
-	readersMu.Unlock()
 }
 
-type Reader interface {
-	Configure() error
+type Recorder interface {
+	Configure(chan data.Position) error
+	RuntimeErr() <-chan error
+	Conf() any
 	Start() error
 	Stop() error
-	RuntimeErr() chan error
-	Position() chan data.Position
-	Conf() any
 }
 
-func New(conf Configuration) (Reader, error) {
-	readersMu.RLock()
-	constructor, ok := readers[conf.ID]
-	readersMu.RUnlock()
+func New(conf Configuration, positionChan chan data.Position) (Recorder, error) {
+
+	constructor, ok := recorders[conf.ID]
 	if !ok {
-		return nil, fmt.Errorf("invalid reader: %s", conf.ID)
+		return nil, fmt.Errorf("invalid recorder: %s", conf.ID)
 	}
 
 	r := constructor()
@@ -57,7 +50,7 @@ func New(conf Configuration) (Reader, error) {
 		return nil, fmt.Errorf("failed to decode configuration: %w", err)
 	}
 
-	if err := r.Configure(); err != nil {
+	if err := r.Configure(positionChan); err != nil {
 		return nil, err
 	}
 

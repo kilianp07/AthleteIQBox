@@ -7,22 +7,17 @@ import (
 	"time"
 
 	"github.com/adrianmo/go-nmea"
+	"github.com/kilianp07/AthleteIQBox/data"
 	"github.com/tarm/serial"
 )
-
-type Point struct {
-	Latitude   float64 `json:"latitude"`
-	Longitude  float64 `json:"longitude"`
-	Altitude   float64 `json:"altitude_m"`
-	Satellites int64   `json:"satellites"`
-}
 
 type Reader struct {
 	conf   Configuration
 	period time.Duration
 
-	runCh chan bool
-	errCh chan error
+	runCh      chan bool
+	errCh      chan error
+	positionCh chan data.Position
 }
 
 func New() *Reader {
@@ -47,6 +42,8 @@ func (r *Reader) Configure() error {
 	r.runCh = make(chan bool, 1)
 	// Initialize the error channel
 	r.errCh = make(chan error, 1)
+	// Initialize the position channel
+	r.positionCh = make(chan data.Position, 1)
 
 	// Try to open the serial port
 	s, err := serial.OpenPort(r.conf.serialConfig.ToSerial())
@@ -75,6 +72,10 @@ func (r *Reader) Start() error {
 	return nil
 }
 
+func (r *Reader) Position() chan data.Position {
+	return r.positionCh
+}
+
 func (r *Reader) Stop() error {
 	r.runCh <- false
 
@@ -93,8 +94,21 @@ func (r *Reader) run(s *serial.Port) {
 	scanner := bufio.NewScanner(s)
 	defer s.Close()
 	for {
+		actual := data.Position{}
+
+		// Flags to track which data fields have been filled
+		latLonFilled := false
+		altitudeFilled := false
+		speedFilled := false
+
 		select {
-		case <-ticker.C:
+		case running := <-r.runCh:
+			if !running {
+				log.Println("Received an order to stop reading from gps.")
+				return
+			}
+
+		default:
 			if !scanner.Scan() {
 				if err := scanner.Err(); err != nil {
 					log.Printf("Scanner error: %v\n", err)
@@ -108,43 +122,60 @@ func (r *Reader) run(s *serial.Port) {
 			sentence, err := nmea.Parse(line)
 			if err != nil {
 				log.Printf("Error parsing NMEA sentence: %v\n", err)
+				r.errCh <- fmt.Errorf("error parsing NMEA sentence: %w", err)
 				continue
 			}
 
 			switch sentence.DataType() {
 			case nmea.TypeGGA:
 				gga := sentence.(nmea.GGA)
-				fmt.Printf("GGA: Latitude: %f, Longitude: %f, Altitude: %f meters, Satellites: %d\n",
-					gga.Latitude, gga.Longitude, gga.Altitude, gga.NumSatellites)
+				actual.Altitude_M = gga.Altitude
+				altitudeFilled = true
 
 			case nmea.TypeRMC:
 				rmc := sentence.(nmea.RMC)
-				fmt.Printf("RMC: Latitude: %f, Longitude: %f, Speed: %f knots, Date: %s\n",
-					rmc.Latitude, rmc.Longitude, rmc.Speed, rmc.Date.String())
-
-			case nmea.TypeGLL:
-				gll := sentence.(nmea.GLL)
-				fmt.Printf("GLL: Latitude: %f, Longitude: %f\n", gll.Latitude, gll.Longitude)
-
-			case nmea.TypeGSA:
-				gsa := sentence.(nmea.GSA)
-				fmt.Printf("GSA: PDOP: %f, HDOP: %f, VDOP: %f\n", gsa.PDOP, gsa.HDOP, gsa.VDOP)
-
-			case nmea.TypeGSV:
-				gsv := sentence.(nmea.GSV)
-				fmt.Printf("GSV: Number of Satellites in View: %d\n", gsv.NumberSVsInView)
+				actual.Latitude = rmc.Latitude
+				actual.Longitude = rmc.Longitude
+				actual.Course = rmc.Course
+				latLonFilled = true
 
 			case nmea.TypeVTG:
 				vtg := sentence.(nmea.VTG)
-				fmt.Printf("VTG: True Track: %f degrees, Speed: %f knots\n", vtg.TrueTrack, vtg.GroundSpeedKnots)
-			}
+				actual.Speed_kMh = vtg.GroundSpeedKPH
+				speedFilled = true
 
-		case running := <-r.runCh:
-			if !running {
-				log.Println("Received an order to stop reading from gps.")
-				return
+				// Supported but useless NMEA sentences
+				/*
+					case nmea.TypeGLL:
+						gll := sentence.(nmea.GLL)
+						fmt.Printf("GLL: Latitude: %f, Longitude: %f\n", gll.Latitude, gll.Longitude)
+
+					case nmea.TypeGSA:
+						gsa := sentence.(nmea.GSA)
+						fmt.Printf("GSA: PDOP: %f, HDOP: %f, VDOP: %f\n", gsa.PDOP, gsa.HDOP, gsa.VDOP)
+
+					case nmea.TypeGSV:
+						gsv := sentence.(nmea.GSV)
+						fmt.Printf("GSV: Number of Satellites in View: %d\n", gsv.NumberSVsInView)
+
+				*/
+
+				// Send `actual` only when all necessary fields are filled
+				if latLonFilled && altitudeFilled && speedFilled {
+					r.positionCh <- actual.Copy()
+
+					// Reset flags for the next complete set of data
+					latLonFilled = false
+					altitudeFilled = false
+					speedFilled = false
+
+					// Reset `actual` for the next set of data
+					actual = data.Position{}
+				}
+
 			}
 		}
+
 	}
 
 }
