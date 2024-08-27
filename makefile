@@ -16,18 +16,20 @@ clean:
 upload:
 	@echo "Uploading to Raspberry Pi..."
 	@scp ./build/raspberry/$(BINARY_NAME) $(SSH_TARGET):AthleteIQBox/
+	@scp ./box.json $(SSH_TARGET):AthleteIQBox/
 	@echo "Done!"
 
-run :
+run:
 	@echo "Running on Raspberry Pi..."
 	@ssh $(SSH_TARGET) "cd AthleteIQBox && sudo ./$(BINARY_NAME) --conf box.json"
 	@echo "Done!"
-test :
+
+test:
 	@echo "Testing on local..."
 	@GOOS=$(HOSTOS) go test -v ./...
 	@echo "Done!"
 
-kill :
+kill:
 	@echo "Killing on Raspberry Pi..."
 	@ssh $(SSH_TARGET) "sudo pkill $(BINARY_NAME)"
 	@echo "Done!"

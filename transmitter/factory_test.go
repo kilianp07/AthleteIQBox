@@ -10,13 +10,13 @@ func TestFactory(t *testing.T) {
 		serviceType string
 		wantErr     bool
 	}{
-		{"Valid service type", "position", false},
+		{"Valid service type", "wifi", false},
 		{"Invalid service type", "invalidService", true},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := factory(tc.serviceType, nil)
+			_, err := factory(tc.serviceType)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("Expected an error, got nil")

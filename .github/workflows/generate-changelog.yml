@@ -26,12 +26,17 @@ jobs:
           OUTPUT: CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
 
-      - name: Commit (Amend)
+      - name: Stash changes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git stash --include-untracked
           git fetch origin main
           git rebase origin/main
+
+      - name: Apply stash and amend last commit
+        run: |
+          git stash pop
           git add CHANGELOG.md
           git commit --amend --no-edit
           git push --force "https://${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "${{ github.ref_name }}"

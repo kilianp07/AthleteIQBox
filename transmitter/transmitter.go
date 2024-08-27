@@ -2,11 +2,11 @@ package transmitter
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"sync"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/kilianp07/AthleteIQBox/transmitter/services"
+	"github.com/kilianp07/AthleteIQBox/utils"
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/examples/option"
 )
@@ -24,10 +24,17 @@ type Transmitter struct {
 
 // New creates a new Transmitter instance with the given configuration.
 // It returns a pointer to the Transmitter and an error, if any.
-func New(configuration *Conf) (*Transmitter, error) {
+func New(conf any) (*Transmitter, error) {
+
+	configuration := Conf{}
+	err := mapstructure.Decode(conf, &configuration)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create the transmitter
 	t := &Transmitter{
-		conf:     configuration,
+		conf:     &configuration,
 		services: make(map[string]services.Service),
 	}
 
@@ -37,32 +44,31 @@ func New(configuration *Conf) (*Transmitter, error) {
 // Start starts the transmitter by configuring it and initializing the device.
 // It takes a sync.WaitGroup and a channel for error communication as parameters.
 // It returns no values.
-func (t *Transmitter) Start(wg *sync.WaitGroup, errchan chan error, successChan chan bool, ctx context.Context) {
-	defer wg.Done()
+func (t *Transmitter) Start(ctx context.Context) error {
+	var err error
 
-	err := t.configure()
-	if err != nil {
-		errchan <- err
+	if err = t.configure(); err != nil {
+		return err
 	}
 
 	if err = t.device.Init(t.onStateChanged); err != nil {
-		errchan <- err
+		return err
 	}
 
-	successChan <- true
 	select {
 	case <-ctx.Done():
-		return
+		return nil
 	default:
-
 	}
 
+	return nil
 }
 
 // configure configures the transmitter by creating the device, creating the services,
 // configuring the services, and collecting the services UUIDs.
 // It returns an error if any of the configuration steps fail.
 func (t *Transmitter) configure() error {
+
 	// Create the device
 	d, err := gatt.NewDevice(option.DefaultServerOptions...)
 	if err != nil {
@@ -78,9 +84,23 @@ func (t *Transmitter) configure() error {
 	}
 
 	// Configure the services
-	for _, service := range t.services {
-		err = service.Configure(t.device)
+	for id, service := range t.services {
+		decoder, err := utils.NewDecoder(service.Conf())
 		if err != nil {
+			return err
+		}
+
+		err = decoder.Decode(t.conf.ServicesConf[id])
+		if err != nil {
+			return err
+		}
+
+		s, err := service.Configure()
+		if err != nil {
+			return err
+		}
+		if err := t.device.AddService(s); err != nil {
+			log.Fatalf("Failed to add service, err: %s", err)
 			return err
 		}
 	}
@@ -113,9 +133,8 @@ func (t *Transmitter) onStateChanged(d gatt.Device, s gatt.State) {
 // The created services are stored in the services map of the Transmitter struct.
 // Returns an error if there is any issue with creating the services.
 func (t *Transmitter) creator() error {
-	fmt.Println(t.conf)
-	for id, conf := range t.conf.ServicesConf {
-		service, err := factory(id, conf)
+	for id := range t.conf.ServicesConf {
+		service, err := factory(id)
 		if err != nil {
 			return err
 		}
@@ -127,11 +146,6 @@ func (t *Transmitter) creator() error {
 // Update updates the specified service with the provided data.
 // It returns an error if the service does not exist or if there is an error updating the service.
 func (t *Transmitter) Update(service string, data any) error {
-	// Check if the service exists
-	if _, ok := t.services[service]; !ok {
-		return fmt.Errorf("service %s does not exist", service)
-	}
-
 	// Update the service
 	return t.services[service].Update(data)
 }
