@@ -1,11 +1,11 @@
-package gps
+package reader
 
 import (
 	"fmt"
 	"reflect"
 	"sync"
 
-	"github.com/kilianp07/AthleteIQBox/gps/nmea"
+	"github.com/kilianp07/AthleteIQBox/gps/reader/nmea"
 	"github.com/kilianp07/AthleteIQBox/utils"
 )
 

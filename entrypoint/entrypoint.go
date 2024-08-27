@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/kilianp07/AthleteIQBox/gps"
+	"github.com/kilianp07/AthleteIQBox/gps/reader"
 	"github.com/kilianp07/AthleteIQBox/transmitter"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/file"
@@ -12,8 +12,8 @@ import (
 )
 
 type configuration struct {
-	Gps       gps.Configuration `json:"gps"`
-	Bluetooth transmitter.Conf  `json:"bluetooth"`
+	Gps       reader.Configuration `json:"gps"`
+	Bluetooth transmitter.Conf     `json:"bluetooth"`
 }
 
 func Start(confFile string) {
@@ -22,7 +22,7 @@ func Start(confFile string) {
 		k      = koanf.New(".")
 		parser = json.Parser()
 		conf   = configuration{}
-		r      gps.Reader
+		r      reader.Reader
 	)
 
 	// Load JSON config.
@@ -34,7 +34,7 @@ func Start(confFile string) {
 		log.Fatalf("error unmarshaling config: %v", err)
 	}
 
-	if r, err = gps.New(conf.Gps); err != nil {
+	if r, err = reader.New(conf.Gps); err != nil {
 		log.Fatalf("error creating gps reader: %v", err)
 	}
 
