@@ -13,7 +13,7 @@ var (
 	saver  recorder.Recorder
 )
 
-func Configure(configuration any) error {
+func Configure(configuration Configuration) error {
 
 	var conf Configuration
 	decoder, err := utils.NewDecoder(&conf)

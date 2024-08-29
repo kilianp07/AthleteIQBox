@@ -17,10 +17,10 @@ func TestPosition_Copy(t *testing.T) {
 		Speed_kMh:  50.0,
 	}
 
-	copy := original.Copy()
+	copiedPosition := original.Copy()
 
-	if !reflect.DeepEqual(original, copy) {
-		t.Errorf("Expected copied position to be equal to original, got %v", copy)
+	if !reflect.DeepEqual(original, copiedPosition) {
+		t.Errorf("Expected copied position to be equal to original, got %v", copiedPosition)
 	}
 
 	// Modifying the original position should not affect the copied position
@@ -30,8 +30,8 @@ func TestPosition_Copy(t *testing.T) {
 	original.Altitude_M = 11.5
 	original.Speed_kMh = 55.0
 
-	if reflect.DeepEqual(original, copy) {
-		t.Errorf("Expected copied position to be different from original, got %v", copy)
+	if reflect.DeepEqual(original, copiedPosition) {
+		t.Errorf("Expected copied position to be different from original, got %v", copiedPosition)
 	}
 }
 func TestPosition_SQLCreateQuery(t *testing.T) {

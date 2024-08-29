@@ -87,24 +87,22 @@ func (r *Reader) RuntimeErr() chan error {
 }
 
 func (r *Reader) run(s *serial.Port) {
-
 	ticker := time.NewTicker(r.period)
 	defer ticker.Stop()
 
 	scanner := bufio.NewScanner(s)
 	defer s.Close()
+
+	latLonFilled := false
+	altitudeFilled := false
+	speedFilled := false
+
+	actual := data.Position{}
 	for {
-		actual := data.Position{}
-
-		// Flags to track which data fields have been filled
-		latLonFilled := false
-		altitudeFilled := false
-		speedFilled := false
-
 		select {
 		case running := <-r.runCh:
 			if !running {
-				log.Println("Received an order to stop reading from gps.")
+				log.Println("Received an order to stop reading from GPS.")
 				return
 			}
 
@@ -118,7 +116,6 @@ func (r *Reader) run(s *serial.Port) {
 
 			line := scanner.Text()
 
-			// Parse the NMEA sentence
 			sentence, err := nmea.Parse(line)
 			if err != nil {
 				log.Printf("Error parsing NMEA sentence: %v\n", err)
@@ -143,39 +140,22 @@ func (r *Reader) run(s *serial.Port) {
 				vtg := sentence.(nmea.VTG)
 				actual.Speed_kMh = vtg.GroundSpeedKPH
 				speedFilled = true
+			}
 
-				// Supported but useless NMEA sentences
-				/*
-					case nmea.TypeGLL:
-						gll := sentence.(nmea.GLL)
-						fmt.Printf("GLL: Latitude: %f, Longitude: %f\n", gll.Latitude, gll.Longitude)
-
-					case nmea.TypeGSA:
-						gsa := sentence.(nmea.GSA)
-						fmt.Printf("GSA: PDOP: %f, HDOP: %f, VDOP: %f\n", gsa.PDOP, gsa.HDOP, gsa.VDOP)
-
-					case nmea.TypeGSV:
-						gsv := sentence.(nmea.GSV)
-						fmt.Printf("GSV: Number of Satellites in View: %d\n", gsv.NumberSVsInView)
-
-				*/
-
-				// Send `actual` only when all necessary fields are filled
-				if latLonFilled && altitudeFilled && speedFilled {
-					r.positionCh <- actual.Copy()
-
-					// Reset flags for the next complete set of data
-					latLonFilled = false
-					altitudeFilled = false
-					speedFilled = false
-
-					// Reset `actual` for the next set of data
-					actual = data.Position{}
+			if latLonFilled && altitudeFilled && speedFilled {
+				actual.Timestamp = time.Now().Unix()
+				select {
+				case r.positionCh <- actual.Copy():
+					log.Printf("Sent position: %v\n", actual)
+				default:
+					log.Print("Position channel is full, dropping data")
 				}
 
+				latLonFilled = false
+				altitudeFilled = false
+				speedFilled = false
+				actual = data.Position{}
 			}
 		}
-
 	}
-
 }

@@ -3,6 +3,7 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -35,6 +36,10 @@ func (r *Recorder) RuntimeErr() <-chan error {
 
 func (r *Recorder) Configure(positionCh chan data.Position) error {
 	r.positionCh = positionCh
+
+	if positionCh == nil {
+		return fmt.Errorf("position channel is nil")
+	}
 
 	// Check if the last caracter of filepath is a /
 	if string(r.conf.Filepath[len(r.conf.Filepath)-1]) != string(os.PathSeparator) {
@@ -70,25 +75,33 @@ func (r *Recorder) Start() error {
 }
 
 func (r *Recorder) Stop() error {
+	log.Println("Stop() called")
 	r.stopCh <- true
 	return nil
 }
 
 func (r *Recorder) run() {
 	ticker := time.NewTicker(r.conf.Period)
+	log.Printf("recorder period set to %v", r.conf.Period)
 	defer ticker.Stop()
 
-	for {
+	log.Print("recorder started")
+	for range ticker.C {
 		select {
-		case <-ticker.C:
-			p := <-r.positionCh
+		case p := <-r.positionCh:
+			log.Printf("recording position: %v", p)
 			_, err := r.db.Exec(p.SQLInsertQuery())
 			if err != nil {
+				log.Printf("failed to insert position: %v", err)
 				r.errCh <- fmt.Errorf("failed to insert position: %w", err)
 			}
-		case <-r.stopCh:
-			return
+		case r := <-r.stopCh:
+			if r {
+				log.Print("recorder stopping")
+				return
+			}
+		default:
+			log.Print("no position to record")
 		}
 	}
-
 }

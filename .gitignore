@@ -27,3 +27,6 @@ build
 .envrc
 
 .vscode
+
+# macOS
+.DS_Store
