@@ -11,6 +11,7 @@ require (
 	github.com/knadh/koanf/parsers/json v0.1.0
 	github.com/knadh/koanf/providers/file v1.1.0
 	github.com/knadh/koanf/v2 v2.1.1
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/spf13/cobra v1.8.1
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 )

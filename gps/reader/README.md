@@ -1,10 +1,10 @@
-# Package `gps` Documentation
+# Package `reader` Documentation
 
-The `gps` package provides a flexible framework for handling GPS data from various sources and formats, such as NMEA. It allows the dynamic creation, configuration, and management of GPS data readers, enabling easy integration with different GPS hardware and protocols.
+The `reader` package provides a flexible framework for handling GPS data from various sources and formats, such as NMEA. It allows the dynamic creation, configuration, and management of GPS data readers, enabling easy integration with different GPS hardware and protocols.
 
 ## Overview
 
-The `gps` package centers around the `Reader` interface, which all GPS readers must implement. This package facilitates the creation of GPS readers based on user-provided configurations, allowing for the seamless integration of different GPS data formats.
+The `reader` package centers around the `Reader` interface, which all GPS readers must implement. This package facilitates the creation of GPS readers based on user-provided configurations, allowing for the seamless integration of different GPS data formats.
 
 ```mermaid
 sequenceDiagram
@@ -81,7 +81,7 @@ func New(conf Configuration) (Reader, error)
 - **Example Usage:**
 
 ```go
-conf := gps.Configuration{
+conf := reader.Configuration{
     Id:   "nmea",
     Conf: map[string]interface{}{
         "Period": "1s",
@@ -92,7 +92,7 @@ conf := gps.Configuration{
     },
 }
 
-reader, err := gps.New(conf)
+reader, err := reader.New(conf)
 if err != nil {
     log.Fatalf("Failed to create GPS reader: %v", err)
 }
@@ -202,7 +202,7 @@ case nmea.TypeVTG:
 }
 ```
 
-## Extending the `gps` Package
+## Extending the `reader` Package
 
 To support additional GPS formats, implement the `Reader` interface for the new format and register it in the package's `init` function:
 

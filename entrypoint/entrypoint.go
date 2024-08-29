@@ -22,7 +22,6 @@ func Start(confFile string) {
 		k      = koanf.New(".")
 		parser = json.Parser()
 		conf   = configuration{}
-		r      gps.Reader
 	)
 
 	// Load JSON config.
@@ -34,11 +33,13 @@ func Start(confFile string) {
 		log.Fatalf("error unmarshaling config: %v", err)
 	}
 
-	if r, err = gps.New(conf.Gps); err != nil {
-		log.Fatalf("error creating gps reader: %v", err)
+	if err = gps.Configure(conf.Gps); err != nil {
+		log.Fatalf("error configuring gps: %v", err)
 	}
 
-	err = r.Start()
+	if err := gps.Start(); err != nil {
+		log.Fatalf("error starting gps reader: %v", err)
+	}
 
 	t, err := transmitter.New(conf.Bluetooth)
 	if err != nil {

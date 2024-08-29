@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Create gps package and nmea implementation (#7)
 - Created git-cliff action (#8)
 - Creat wlan bluetooth service (#10)
+- *(gps)* Create recorder package (#13)
 
 ### 🐛 Bug Fixes
 
