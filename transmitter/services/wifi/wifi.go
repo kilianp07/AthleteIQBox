@@ -105,7 +105,7 @@ func (w *WiFi) Update(_ any) error {
 
 func (w *WiFi) handleWLANWrite(_ gatt.Request, incoming []byte) (status byte) {
 	wifi := wiFi{}
-	w.logger.Infof("Received WLAN write request:", string(incoming))
+	w.logger.Infof("Received WLAN write request: %s", string(incoming))
 	if err := json.Unmarshal(incoming, &wifi); err != nil {
 		w.logger.Errorf("Failed to unmarshal data:", err)
 		return gatt.StatusUnexpectedError
@@ -129,7 +129,7 @@ func (w *WiFi) handleWriteTrigger(_ gatt.Request, incoming []byte) (status byte)
 func (w *WiFi) handleReadAps(rsp gatt.ResponseWriter, rr *gatt.ReadRequest) {
 	value, err := json.Marshal(w.aps)
 	if err != nil {
-		w.logger.Errorf("Failed to marshal APs:", err)
+		w.logger.Errorf("Failed to marshal APs: %w", err)
 		rsp.SetStatus(gatt.StatusUnexpectedError)
 		return
 	}
@@ -137,7 +137,7 @@ func (w *WiFi) handleReadAps(rsp gatt.ResponseWriter, rr *gatt.ReadRequest) {
 	// Create a buffer and compact the JSON
 	var buf bytes.Buffer
 	if err := json.Compact(&buf, value); err != nil {
-		w.logger.Errorf("Failed to compact JSON:", err)
+		w.logger.Errorf("Failed to compact JSON: %w", err)
 		rsp.SetStatus(gatt.StatusUnexpectedError)
 		return
 	}
@@ -149,7 +149,7 @@ func (w *WiFi) handleReadAps(rsp gatt.ResponseWriter, rr *gatt.ReadRequest) {
 	// Check if data fits in one MTU
 	if len(data) <= mtu {
 		if _, err := rsp.Write(data); err != nil {
-			w.logger.Errorf("Failed to write APs response:", err)
+			w.logger.Errorf("Failed to write APs response: %w", err)
 			rsp.SetStatus(gatt.StatusUnexpectedError)
 			return
 		}
@@ -162,7 +162,7 @@ func (w *WiFi) handleReadAps(rsp gatt.ResponseWriter, rr *gatt.ReadRequest) {
 			}
 			chunk := data[i:end]
 			if _, err := rsp.Write(chunk); err != nil {
-				w.logger.Errorf("Failed to write APs response:", err)
+				w.logger.Errorf("Failed to write APs response: %w", err)
 				rsp.SetStatus(gatt.StatusUnexpectedError)
 				return
 			}
@@ -184,7 +184,7 @@ func (w *WiFi) Scan() {
 			w.logger.Infof("Scanning for access points")
 			aps, err := w.wc.Scan()
 			if err != nil {
-				w.logger.Errorf("Failed to scan:", err)
+				w.logger.Errorf("Failed to scan: %w", err)
 				continue
 			}
 
