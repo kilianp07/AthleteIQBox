@@ -206,7 +206,7 @@ func (w *WiFi) addNetwork(d wiFi) error {
 		net = wireless.NewNetwork(d.SSID, d.Password)
 		err error
 	)
-	w.logger.Infof("Adding network:", d.SSID)
+	w.logger.Infof("Adding network: %s", d.SSID)
 
 	_, err = w.wc.AddOrUpdateNetwork(net)
 	if err != nil {
