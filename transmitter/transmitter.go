@@ -2,11 +2,11 @@ package transmitter
 
 import (
 	"context"
-	"log"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/kilianp07/AthleteIQBox/transmitter/services"
 	"github.com/kilianp07/AthleteIQBox/utils"
+	logger "github.com/kilianp07/AthleteIQBox/utils/logger"
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/examples/option"
 )
@@ -20,6 +20,7 @@ type Transmitter struct {
 	conf          *Conf
 	device        gatt.Device
 	servicesUUIDs []gatt.UUID
+	logger        *logger.Logger
 }
 
 // New creates a new Transmitter instance with the given configuration.
@@ -36,6 +37,7 @@ func New(conf any) (*Transmitter, error) {
 	t := &Transmitter{
 		conf:     &configuration,
 		services: make(map[string]services.Service),
+		logger:   logger.GetLogger("Transmitter"),
 	}
 
 	return t, nil
@@ -72,7 +74,7 @@ func (t *Transmitter) configure() error {
 	// Create the device
 	d, err := gatt.NewDevice(option.DefaultServerOptions...)
 	if err != nil {
-		log.Fatalf("Failed to open device, err: %s", err)
+		t.logger.Fatalf("Failed to open device, err: %s", err)
 		return err
 	}
 	t.device = d
@@ -100,7 +102,7 @@ func (t *Transmitter) configure() error {
 			return err
 		}
 		if err := t.device.AddService(s); err != nil {
-			log.Fatalf("Failed to add service, err: %s", err)
+			t.logger.Errorf("Failed to add service, err: %s", err)
 			return err
 		}
 	}
@@ -117,14 +119,14 @@ func (t *Transmitter) configure() error {
 // If the state is gatt.StatePoweredOn, it advertises the device name and services.
 // Otherwise, it logs the state.
 func (t *Transmitter) onStateChanged(d gatt.Device, s gatt.State) {
-	log.Printf("State: %s", s)
+	t.logger.Debugf("State: %s", s)
 	switch s {
 	case gatt.StatePoweredOn:
 		if err := d.AdvertiseNameAndServices(deviceName, t.servicesUUIDs); err != nil {
-			log.Fatalf("Failed to advertise name and services, err: %s", err)
+			t.logger.Fatalf("Failed to advertise name and services, err: %s", err)
 		}
 	default:
-		log.Println("State:", s)
+		t.logger.Debugf("State:", s)
 	}
 }
 

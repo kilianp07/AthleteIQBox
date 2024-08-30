@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/kilianp07/AthleteIQBox/transmitter/services"
 	"github.com/kilianp07/AthleteIQBox/utils"
+	logger "github.com/kilianp07/AthleteIQBox/utils/logger"
 	wireless "github.com/kilianp07/go-wireless"
 	"github.com/paypal/gatt"
 )
@@ -43,6 +43,7 @@ type WiFi struct {
 	trigger         chan bool
 	wc              *wireless.Client
 	aps             avAps
+	logger          *logger.Logger
 }
 
 // NewWiFi initializes a new WiFi service.
@@ -50,6 +51,7 @@ func NewWiFi() services.Service {
 	return &WiFi{
 		conf:    wiFiConf{},
 		trigger: make(chan bool, 1),
+		logger:  logger.GetLogger("Wlan service"),
 	}
 }
 
@@ -87,10 +89,10 @@ func (w *WiFi) Configure() (*gatt.Service, error) {
 	w.avApsChar.HandleReadFunc(w.handleReadAps)
 
 	// Log the UUIDs being added
-	log.Printf("Service UUID: %s", w.conf.ServiceUUID)
-	log.Printf("Wlan UUID: %s", w.conf.WlanUUID)
-	log.Printf("Trigger Scan UUID: %s", w.conf.TriggerScanUUID)
-	log.Printf("Available APs UUID: %s", w.conf.AvApsUUID)
+	w.logger.Debugf("Service UUID: %s", w.conf.ServiceUUID)
+	w.logger.Debugf("Wlan UUID: %s", w.conf.WlanUUID)
+	w.logger.Debugf("Trigger Scan UUID: %s", w.conf.TriggerScanUUID)
+	w.logger.Debugf("Available APs UUID: %s", w.conf.AvApsUUID)
 
 	go w.Scan()
 	return w.service, nil
@@ -103,22 +105,22 @@ func (w *WiFi) Update(_ any) error {
 
 func (w *WiFi) handleWLANWrite(_ gatt.Request, incoming []byte) (status byte) {
 	wifi := wiFi{}
-	log.Println("Received WLAN write request:", string(incoming))
+	w.logger.Infof("Received WLAN write request: %s", string(incoming))
 	if err := json.Unmarshal(incoming, &wifi); err != nil {
-		log.Println("Failed to unmarshal data:", err)
+		w.logger.Errorf("Failed to unmarshal data:", err)
 		return gatt.StatusUnexpectedError
 	}
-	log.Printf("Unmarshaled WiFi data: %+v", wifi)
+	w.logger.Debugf("Unmarshaled WiFi data: %+v", wifi)
 
 	if err := w.addNetwork(wifi); err != nil {
-		log.Println("Failed to add network:", err)
+		w.logger.Errorf("Failed to add network:", err)
 		return gatt.StatusUnexpectedError
 	}
 	return gatt.StatusSuccess
 }
 
 func (w *WiFi) handleWriteTrigger(_ gatt.Request, incoming []byte) (status byte) {
-	log.Println("Received trigger scan write request:", string(incoming))
+	w.logger.Infof("Received trigger scan write request:", string(incoming))
 	triggerValue := strings.ToLower(string(incoming)) == "true"
 	w.trigger <- triggerValue // Send the trigger value
 	return gatt.StatusSuccess
@@ -127,7 +129,7 @@ func (w *WiFi) handleWriteTrigger(_ gatt.Request, incoming []byte) (status byte)
 func (w *WiFi) handleReadAps(rsp gatt.ResponseWriter, rr *gatt.ReadRequest) {
 	value, err := json.Marshal(w.aps)
 	if err != nil {
-		log.Println("Failed to marshal APs:", err)
+		w.logger.Errorf("Failed to marshal APs: %w", err)
 		rsp.SetStatus(gatt.StatusUnexpectedError)
 		return
 	}
@@ -135,7 +137,7 @@ func (w *WiFi) handleReadAps(rsp gatt.ResponseWriter, rr *gatt.ReadRequest) {
 	// Create a buffer and compact the JSON
 	var buf bytes.Buffer
 	if err := json.Compact(&buf, value); err != nil {
-		log.Println("Failed to compact JSON:", err)
+		w.logger.Errorf("Failed to compact JSON: %w", err)
 		rsp.SetStatus(gatt.StatusUnexpectedError)
 		return
 	}
@@ -147,7 +149,7 @@ func (w *WiFi) handleReadAps(rsp gatt.ResponseWriter, rr *gatt.ReadRequest) {
 	// Check if data fits in one MTU
 	if len(data) <= mtu {
 		if _, err := rsp.Write(data); err != nil {
-			log.Println("Failed to write APs response:", err)
+			w.logger.Errorf("Failed to write APs response: %w", err)
 			rsp.SetStatus(gatt.StatusUnexpectedError)
 			return
 		}
@@ -160,7 +162,7 @@ func (w *WiFi) handleReadAps(rsp gatt.ResponseWriter, rr *gatt.ReadRequest) {
 			}
 			chunk := data[i:end]
 			if _, err := rsp.Write(chunk); err != nil {
-				log.Println("Failed to write APs response:", err)
+				w.logger.Errorf("Failed to write APs response: %w", err)
 				rsp.SetStatus(gatt.StatusUnexpectedError)
 				return
 			}
@@ -179,10 +181,10 @@ func (w *WiFi) GetServiceUUID() string {
 func (w *WiFi) Scan() {
 	for {
 		if <-w.trigger {
-			log.Println("Scanning for access points")
+			w.logger.Infof("Scanning for access points")
 			aps, err := w.wc.Scan()
 			if err != nil {
-				log.Println("Failed to scan:", err)
+				w.logger.Errorf("Failed to scan: %w", err)
 				continue
 			}
 
@@ -193,7 +195,7 @@ func (w *WiFi) Scan() {
 					Signal: ap.Signal,
 				})
 			}
-			log.Printf("Found %d access points\n", len(data.Aps))
+			w.logger.Infof("Found %d access points\n", len(data.Aps))
 			w.aps = data
 		}
 	}
@@ -204,7 +206,7 @@ func (w *WiFi) addNetwork(d wiFi) error {
 		net = wireless.NewNetwork(d.SSID, d.Password)
 		err error
 	)
-	log.Println("Adding network:", d.SSID)
+	w.logger.Infof("Adding network: %s", d.SSID)
 
 	_, err = w.wc.AddOrUpdateNetwork(net)
 	if err != nil {
