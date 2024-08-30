@@ -3,11 +3,12 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
 	"github.com/kilianp07/AthleteIQBox/data"
+	utils "github.com/kilianp07/AthleteIQBox/utils/logger"
+
 	// Import the sqlite3 package to register the database driver
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -18,12 +19,14 @@ type Recorder struct {
 	stopCh     chan bool
 	errCh      chan error
 	db         *sql.DB
+	logger     *utils.Logger
 }
 
 func New() *Recorder {
 	return &Recorder{
 		conf:   configuration{},
 		stopCh: make(chan bool, 1),
+		logger: utils.GetLogger("SQLITE Recorder"),
 	}
 }
 
@@ -49,8 +52,8 @@ func (r *Recorder) Configure(positionCh chan data.Position) error {
 
 	// Construct filename using the current date and filepath
 	filename := fmt.Sprintf("%s%s.db", r.conf.Filepath, time.Now().Format(time.RFC3339))
+	r.logger.Infof("Creating database as %s", filename)
 
-	fmt.Println(filename)
 	// Create the database file
 	db, err := sql.Open("sqlite3", filename)
 	if err != nil {
@@ -75,33 +78,32 @@ func (r *Recorder) Start() error {
 }
 
 func (r *Recorder) Stop() error {
-	log.Println("Stop() called")
+	r.logger.Infof("")
 	r.stopCh <- true
 	return nil
 }
 
 func (r *Recorder) run() {
 	ticker := time.NewTicker(r.conf.Period)
-	log.Printf("recorder period set to %v", r.conf.Period)
 	defer ticker.Stop()
 
-	log.Print("recorder started")
+	r.logger.Infof("recorder started")
 	for range ticker.C {
 		select {
 		case p := <-r.positionCh:
-			log.Printf("recording position: %v", p)
+			r.logger.Debugf("recording position: %v", p)
 			_, err := r.db.Exec(p.SQLInsertQuery())
 			if err != nil {
-				log.Printf("failed to insert position: %v", err)
+				r.logger.Errorf("failed to insert position: %v", err)
 				r.errCh <- fmt.Errorf("failed to insert position: %w", err)
 			}
-		case r := <-r.stopCh:
-			if r {
-				log.Print("recorder stopping")
+		case stop := <-r.stopCh:
+			if stop {
+				r.logger.Infof("recorder stopping")
 				return
 			}
 		default:
-			log.Print("no position to record")
+			r.logger.Infof("no position to record")
 		}
 	}
 }

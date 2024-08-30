@@ -3,11 +3,11 @@ package nmea
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/adrianmo/go-nmea"
 	"github.com/kilianp07/AthleteIQBox/data"
+	utils "github.com/kilianp07/AthleteIQBox/utils/logger"
 	"github.com/tarm/serial"
 )
 
@@ -18,11 +18,13 @@ type Reader struct {
 	runCh      chan bool
 	errCh      chan error
 	positionCh chan data.Position
+	logger     *utils.Logger
 }
 
 func New() *Reader {
 	return &Reader{
-		conf: Configuration{},
+		conf:   Configuration{},
+		logger: utils.GetLogger("NMEA Reader"),
 	}
 }
 
@@ -102,14 +104,14 @@ func (r *Reader) run(s *serial.Port) {
 		select {
 		case running := <-r.runCh:
 			if !running {
-				log.Println("Received an order to stop reading from GPS.")
+				r.logger.Infof("Received an order to stop reading from GPS.")
 				return
 			}
 
 		default:
 			if !scanner.Scan() {
 				if err := scanner.Err(); err != nil {
-					log.Printf("Scanner error: %v\n", err)
+					r.logger.Errorf("Scanner error: %v\n", err)
 				}
 				return
 			}
@@ -118,7 +120,7 @@ func (r *Reader) run(s *serial.Port) {
 
 			sentence, err := nmea.Parse(line)
 			if err != nil {
-				log.Printf("Error parsing NMEA sentence: %v\n", err)
+				r.logger.Errorf("Error parsing NMEA sentence: %v\n", err)
 				r.errCh <- fmt.Errorf("error parsing NMEA sentence: %w", err)
 				continue
 			}
@@ -146,9 +148,9 @@ func (r *Reader) run(s *serial.Port) {
 				actual.Timestamp = time.Now().Unix()
 				select {
 				case r.positionCh <- actual.Copy():
-					log.Printf("Sent position: %v\n", actual)
+					r.logger.Debugf("Sent position: %v\n", actual)
 				default:
-					log.Print("Position channel is full, dropping data")
+					r.logger.Errorf("Position channel is full, dropping data")
 				}
 
 				latLonFilled = false

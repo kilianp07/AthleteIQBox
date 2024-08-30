@@ -6,14 +6,16 @@ import (
 
 	"github.com/kilianp07/AthleteIQBox/gps"
 	"github.com/kilianp07/AthleteIQBox/transmitter"
+	utils "github.com/kilianp07/AthleteIQBox/utils/logger"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 )
 
 type configuration struct {
-	Gps       gps.Configuration `json:"gps"`
-	Bluetooth transmitter.Conf  `json:"bluetooth"`
+	Gps       gps.Configuration         `json:"gps"`
+	Bluetooth transmitter.Conf          `json:"bluetooth"`
+	Logger    utils.LoggerConfiguration `json:"logger"`
 }
 
 func Start(confFile string) {
@@ -22,6 +24,7 @@ func Start(confFile string) {
 		k      = koanf.New(".")
 		parser = json.Parser()
 		conf   = configuration{}
+		logger *utils.Logger
 	)
 
 	// Load JSON config.
@@ -33,24 +36,27 @@ func Start(confFile string) {
 		log.Fatalf("error unmarshaling config: %v", err)
 	}
 
+	// Configure logger.
+	logger = utils.NewLogger(conf.Logger)
+
 	if err = gps.Configure(conf.Gps); err != nil {
-		log.Fatalf("error configuring gps: %v", err)
+		logger.Errorf("error configuring gps reader: %v", err)
+		return
 	}
 
 	if err := gps.Start(); err != nil {
-		log.Fatalf("error starting gps reader: %v", err)
+		logger.Errorf("error starting gps reader: %v", err)
+		return
 	}
 
 	t, err := transmitter.New(conf.Bluetooth)
 	if err != nil {
-		log.Fatalf("error creating transmitter: %v", err)
+		logger.Errorf("error creating transmitter: %v", err)
+		return
 	}
 
 	if err = t.Start(context.Background()); err != nil {
-		log.Fatalf("error starting transmitter: %v", err)
-	}
-	if err != nil {
-		log.Fatalf("error starting gps reader: %v", err)
+		logger.Errorf("error starting transmitter: %v", err)
 		return
 	}
 

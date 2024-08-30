@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kilianp07/AthleteIQBox/data"
+	utils "github.com/kilianp07/AthleteIQBox/utils/logger"
 )
 
 func TestRecorder_Configure(t *testing.T) {
@@ -29,6 +30,7 @@ func TestRecorder_Configure(t *testing.T) {
 	r := &Recorder{
 		conf:       conf,
 		positionCh: positionCh,
+		logger:     utils.GetLogger("SQLITE Recorder"),
 	}
 
 	// Call the Configure method

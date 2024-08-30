@@ -15,7 +15,7 @@
     }
   },
   "gps": {
-    "reader":{
+    "reader": {
       "id": "nmea",
       "conf": {
         "period": "1s",
@@ -24,12 +24,22 @@
         "read_timeout": "1s"
       }
     },
-    "recorder":{
+    "recorder": {
       "id": "sqlite",
       "conf": {
         "db_filepath": "./",
         "flush_period": "1s"
       }
     }
+  },
+  "logger": {
+    "outputs": [
+      {
+        "name": "console",
+        "level": "debug"
+      }
+    ],
+    "timestamp": true,
+    "caller": false
   }
 }
