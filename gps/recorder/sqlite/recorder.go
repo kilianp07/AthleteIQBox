@@ -78,7 +78,7 @@ func (r *Recorder) Start() error {
 }
 
 func (r *Recorder) Stop() error {
-	r.logger.Infof("")
+	r.logger.Infof("Recorder stopping")
 	r.stopCh <- true
 	return nil
 }
