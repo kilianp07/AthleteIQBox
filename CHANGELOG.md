@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Creat wlan bluetooth service (#10)
 - *(gps)* Create recorder package (#13)
 - Created logger package (#15)
+- Created button package (#17)
 
 ### 🐛 Bug Fixes
 

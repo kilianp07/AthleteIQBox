@@ -36,10 +36,20 @@
     "outputs": [
       {
         "name": "console",
-        "level": "debug"
+        "level": "info"
       }
     ],
     "timestamp": true,
     "caller": false
+  },
+  "buttons": {
+    "switches": {
+      "start": {
+        "gpio": "GPIO2"
+      },
+      "stop":{
+        "gpio": "GPIO3"
+      }
+    }
   }
 }
